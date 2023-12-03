@@ -1,0 +1,17 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 2df0726fefb5a2c12c42471fed8efa72d3fabdab3fb9f36dcae6e63979862d87 # shrinks to a = -4.004858296653714e77, b = 2.3247655603414564e136, vector = Vector { coordinates: [-1.3592360400415237e261, 0.0, 0.0] }
+cc 944832b20ec43d25caacdf7005a1e56f3033594ece2bb5159325ab2579df83e1 # shrinks to a = 4.3111659765803665e225, b = -2.6559191674288866e-203, vector = Vector { coordinates: [-1.0415297304486675e-266, 0.0, 0.0] }
+cc 9ff6c5891e76baad11c345dd505af5373ed6d81ae233c8444d6d02e73f9a03b4 # shrinks to vector0 = Vector { coordinates: [0.0, -1.1933117478545983e199, 0.0] }, vector1 = Vector { coordinates: [0.0, 1.885429362508935e101, 0.0] }, a = -1.6339245791273487e308
+cc 50165c4bb0d1cce8f7548631c2c1bb0a28be61580077277566962b4a22203056 # shrinks to a = 3.568147823818504e82, b = -5.91065256715483e-230, vector = Vector { coordinates: [-1.699115445440673e-87, 0.0, 0.0] }
+cc f3a4549a6e962ce09efa9516f7229f147f5b1bc5d118704c1e8c185158ae3e7f # shrinks to a = 5.76353205207565e-309, b = -8.065242044273665e-309, vector = Vector { coordinates: [0.0, 5.87055663835079e98, 0.0] }
+cc 79c2e91ed3246e08eb5df68f8ab97fd0da3638dd19d689d4a870101e5d2726a7 # shrinks to vector0 = Vector { coordinates: [0.0, 0.0, 6.50888289190307e-309] }, vector1 = Vector { coordinates: [0.0, 0.0, -6.713041717415186e-309] }, a = -8.897121599249971e47
+cc 68639fa5e36dd97d37d9d219296bfe4f04a26ff67c2d95d56d7e2ef8155edc3b # shrinks to a = 1.3172999720804386e-173, b = 2.146374113475187e-166, vector = Vector { coordinates: [0.0, -3.3337007559242996e52, 0.0] }
+cc aa95526366b811dca586c1a2215185ad113396b4bea91e99f7654de45963376c # shrinks to vector0 = Vector { coordinates: [8.968065651633452e99, 0.0, 0.0] }, vector1 = Vector { coordinates: [-8.610529481535811e99, 0.0, 0.0] }, a = 9.508894049874002e99
+cc 5888562961338242f342b69483a7efd391f326bf009246d56934d8d3a3254902 # shrinks to a = 5.572230377759939e99, b = -5.711245178500552e99, vector = Vector { coordinates: [0.0, 0.0, -2.2619836639920297e99] }
+cc 51d11fd0aaf6ac7d43d9e217796308390e343e01606bf7a19d20d0e5b01bcf0d # shrinks to vector0 = Vector { coordinates: [0.0, 0.0, -3.2790421191168525e99] }, vector1 = Vector { coordinates: [0.0, 0.0, -2.4529634118917144e99] }, vector2 = Vector { coordinates: [0.0, 0.0, 6.005168327746478e99] }
+cc 119176838663d3fc5347a64f0e0286386b610309ed6a0ca3a7141b1e88207668 # shrinks to a = -7.17279698237066e99, b = 7.93039683791251e99, vector = Vector { coordinates: [0.0, 0.0, -5.592792117092009e99] }

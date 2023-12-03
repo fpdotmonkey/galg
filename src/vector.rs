@@ -1,12 +1,15 @@
 use float_eq::float_eq;
 
 /// The type of a real-valued scalar
+///
+/// Multiplication with very large values is hairy, so I only guarantee
+/// things to work for `abs(Scalar) < 10^150`.
 pub type Scalar = f64;
 
 /// A mathy vector to do linear and geometric algebra with
-#[derive(Debug)]
-pub struct Vector<const DIMENSION: usize> {
-    coordinates: [Scalar; DIMENSION],
+#[derive(Debug, Clone)]
+pub struct Vector<const N: usize> {
+    coordinates: [Scalar; N],
 }
 
 /// A convenience type for 2D vectors
@@ -34,84 +37,62 @@ pub type Vector3 = Vector<3>;
 /// ```
 pub type Vector4 = Vector<4>;
 
-impl<const DIMENSION: usize> Vector<DIMENSION> {
+impl<const N: usize> Vector<N> {
     /// Make a vector whose elements are given
-    pub fn new(coordinates: [Scalar; DIMENSION]) -> Self {
-        Vector::<DIMENSION> { coordinates }
+    pub fn new(coordinates: [Scalar; N]) -> Self {
+        Vector::<N> { coordinates }
     }
 
     /// Get a vector whose elements are all `0.0`
     pub fn zero() -> Self {
-        Vector::<DIMENSION> {
-            coordinates: [0.0; DIMENSION],
+        Vector::<N> {
+            coordinates: [0.0; N],
         }
     }
 }
 
-impl<const DIMENSION: usize> PartialEq for Vector<DIMENSION> {
-    /// This method tests for self and other values to be equal, and is used by ==.
-    /// [Read more](https://doc.rust-lang.org/1.63.0/core/cmp/trait.PartialEq.html#tymethod.eq)
-    ///
-    /// This computes approximate equality with within a couple
-    /// [ULP](https://en.wikipedia.org/wiki/Unit_in_the_last_place).
+impl<const N: usize> PartialEq for Vector<N> {
     fn eq(&self, other: &Self) -> bool {
-        // an ULP tolerance is how many representable floats away another float can be
-        const ULP_TOLERANCE: u64 = 2;
+        const TOLERANCE: f64 = 1.0e-7;
 
         self.coordinates
             .iter()
             .enumerate()
             .all(|(index, &coordinate)| {
-                float_eq!(coordinate, other.coordinates[index], ulps <= ULP_TOLERANCE)
+                float_eq!(coordinate, other.coordinates[index], rmax <= TOLERANCE)
             })
     }
 }
 
-impl<const DIMENSION: usize> std::ops::Mul<Vector<DIMENSION>> for Scalar {
-    type Output = Vector<DIMENSION>;
+impl<const N: usize> std::ops::Mul<Vector<N>> for Scalar {
+    type Output = Vector<N>;
 
     fn mul(self, other: Self::Output) -> Self::Output {
-        Vector::<DIMENSION>::new(
-            other
-                .coordinates
-                .into_iter()
-                .map(|coordinate| self * coordinate)
-                .collect::<Vec<Scalar>>()
-                .try_into()
-                .unwrap(),
-        )
+        Vector::<N>::new(other.coordinates.map(|coordinate| self * coordinate))
     }
 }
 
-impl<const DIMENSION: usize> std::ops::Add for Vector<DIMENSION> {
+impl<const N: usize> std::ops::Add for Vector<N> {
     type Output = Self;
 
     fn add(self, other: Self) -> Self::Output {
-        Vector::<DIMENSION>::new(
-            self.coordinates
-                .iter()
-                .enumerate()
-                .map(|(index, coordinate)| coordinate + other.coordinates[index])
-                .collect::<Vec<Scalar>>()
-                .try_into()
-                .unwrap(),
-        )
+        let mut sum = [0.0; N];
+        for i in 0..N {
+            sum[i] = self.coordinates[i] + other.coordinates[i];
+        }
+        Vector::<N>::new(sum)
     }
 }
 
-impl<const DIMENSION: usize> std::ops::Sub for Vector<DIMENSION> {
+impl<const N: usize> std::ops::Sub for Vector<N> {
     type Output = Self;
 
     fn sub(self, other: Self) -> Self::Output {
-        Vector::<DIMENSION>::new(
-            self.coordinates
-                .iter()
-                .enumerate()
-                .map(|(index, coordinate)| coordinate - other.coordinates[index])
-                .collect::<Vec<Scalar>>()
-                .try_into()
-                .unwrap(),
-        )
+        let mut difference = [0.0; N];
+        for i in 0..N {
+            difference[i] = self.coordinates[i] - other.coordinates[i];
+        }
+        Vector::<N>::new(difference)
     }
 }
 
@@ -158,134 +139,6 @@ mod tests {
     }
 
     #[test]
-    fn vector_addition_is_commutative() {
-        // Macdonald Definition 2.1 V1
-        assert_eq!(
-            Vector::<2>::new([1.0, 1.0]) + Vector::<2>::new([2.0, 1.0]),
-            Vector::<2>::new([2.0, 1.0]) + Vector::<2>::new([1.0, 1.0])
-        );
-        assert_eq!(
-            Vector::<2>::new([-1.0, 10.0]) + Vector::<2>::new([666.6, 42.8]),
-            Vector::<2>::new([666.6, 42.8]) + Vector::<2>::new([-1.0, 10.0])
-        );
-    }
-
-    #[test]
-    fn vector_addition_is_associative() {
-        // Macdonald Definition 2.1 V2
-        assert_eq!(
-            (Vector::<2>::new([1.0, 1.0]) + Vector::<2>::new([2.0, 1.0]))
-                + Vector::<2>::new([-10.1, 0.0]),
-            Vector::<2>::new([1.0, 1.0])
-                + (Vector::<2>::new([2.0, 1.0]) + Vector::<2>::new([-10.1, 0.0]))
-        );
-        assert_eq!(
-            (Vector::<2>::new([-1.0, 10.0]) + Vector::<2>::new([666.6, 42.8]))
-                + Vector::<2>::new([98.7, -273.15]),
-            Vector::<2>::new([-1.0, 10.0])
-                + (Vector::<2>::new([666.6, 42.8]) + Vector::<2>::new([98.7, -273.15]))
-        );
-    }
-
-    #[test]
-    fn zero_vector_is_the_additive_identity() {
-        // Macdonald Definition 2.1 V3
-        assert_eq!(
-            Vector::<2>::new([1.0, 1.0]) + Vector::<2>::zero(),
-            Vector::<2>::new([1.0, 1.0])
-        );
-        assert_eq!(
-            Vector::<2>::new([-1.0, -1.0]) + Vector::<2>::zero(),
-            Vector::<2>::new([-1.0, -1.0])
-        );
-        assert_eq!(
-            Vector::<2>::new([98.7, -273.15]) + Vector::<2>::zero(),
-            Vector::<2>::new([98.7, -273.15])
-        );
-    }
-
-    #[test]
-    fn scalar_multiplication_by_0_yields_the_zero_vector() {
-        // Macdonald Definition 2.1 V4
-        assert_eq!(0.0 * Vector::<2>::new([1.0, 1.0]), Vector::<2>::zero());
-        assert_eq!(0.0 * Vector::<2>::new([-1.0, -1.0]), Vector::<2>::zero());
-        assert_eq!(0.0 * Vector::<2>::new([98.7, -273.15]), Vector::<2>::zero());
-    }
-
-    #[test]
-    fn scalar_1_is_the_multiplicative_identity() {
-        // Macdonald Definition 2.1 V5
-        assert_eq!(
-            1.0 * Vector::<2>::new([1.0, 1.0]),
-            Vector::<2>::new([1.0, 1.0])
-        );
-        assert_eq!(
-            1.0 * Vector::<2>::new([-1.0, -1.0]),
-            Vector::<2>::new([-1.0, -1.0])
-        );
-        assert_eq!(
-            1.0 * Vector::<2>::new([98.7, -273.15]),
-            Vector::<2>::new([98.7, -273.15])
-        );
-    }
-
-    #[test]
-    fn scalar_multiplication_is_associative() {
-        // Macdonald Definition 2.1 V6
-        assert_eq!(
-            2.0 * (3.0 * Vector::<2>::new([1.0, 1.0])),
-            (2.0 * 3.0) * Vector::<2>::new([1.0, 1.0])
-        );
-        assert_eq!(
-            -3.8 * (22.2 * Vector::<2>::new([-1.0, -1.0])),
-            (-3.8 * 22.2) * Vector::<2>::new([-1.0, -1.0])
-        );
-        assert_eq!(
-            -98.7 * (-273.15 * Vector::<2>::new([98.7, -273.15])),
-            (-98.7 * -273.15) * Vector::<2>::new([98.7, -273.15])
-        );
-    }
-
-    #[test]
-    fn scalar_multiplication_distributes_over_vector_addition() {
-        // Macdonald Definition 2.1 V7
-        assert_eq!(
-            9.0 * (Vector::<2>::new([1.0, 1.0]) + Vector::<2>::new([2.0, 1.0])),
-            9.0 * Vector::<2>::new([1.0, 1.0]) + 9.0 * Vector::<2>::new([2.0, 1.0])
-        );
-        assert_eq!(
-            -12.7 * (Vector::<2>::new([-1.0, 10.0]) + Vector::<2>::new([666.6, 42.8])),
-            -12.7 * Vector::<2>::new([-1.0, 10.0]) + (-12.7) * Vector::<2>::new([666.6, 42.8])
-        );
-    }
-
-    #[test]
-    fn scalar_multiplication_distributes_over_scalar_addition() {
-        // Macdonald Definition 2.1 V8
-        assert_eq!(
-            (2.0 + 3.0) * Vector::<2>::new([1.0, 1.0]),
-            2.0 * Vector::<2>::new([1.0, 1.0]) + 3.0 * Vector::<2>::new([1.0, 1.0])
-        );
-        assert_eq!(
-            (-3.8 + 22.2) * Vector::<2>::new([-1.0, -1.0]),
-            -3.8 * Vector::<2>::new([-1.0, -1.0]) + 22.2 * Vector::<2>::new([-1.0, -1.0])
-        );
-        assert_eq!(
-            (-98.7 + -273.15) * Vector::<2>::new([98.7, -273.15]),
-            -98.7 * Vector::<2>::new([98.7, -273.15])
-                + (-273.15) * Vector::<2>::new([98.7, -273.15])
-        );
-    }
-
-    #[test]
-    fn vector_subtraction_is_like_vector_addition() {
-        assert_eq!(
-            Vector::<2>::new([2.0, 2.0]) - Vector::<2>::new([1.0, 3.0]),
-            Vector::<2>::new([2.0, 2.0]) + (-1.0) * Vector::<2>::new([1.0, 3.0])
-        )
-    }
-
-    #[test]
     fn other_dimension_vectors() {
         Vector::<0>::new([]); // it doesn't do much, but I see no harm in having it
         Vector::<1>::new([89.3]);
@@ -293,11 +146,128 @@ mod tests {
         Vector::<256>::new([-78.2; 256]);
     }
 
-    #[test]
-    fn a_vector_plus_its_additive_inverse_is_zero() {
-        assert_eq!(
-            Vector::<2>::new([1.0, 1.0]) + Vector::<2>::new([-1.0, -1.0]),
-            Vector::<2>::zero()
-        );
+    use proptest::prelude::*;
+
+    fn arbitrary_scalar() -> impl Strategy<Value = Scalar> {
+        // any larger a range and you start to run into annoying
+        // floating-point issues
+        -1.0e+150_f64..1.0e+150_f64
+    }
+
+    fn arbitrary_vector<const N: usize>() -> BoxedStrategy<Vector<N>> {
+        proptest::array::uniform::<_, N>(arbitrary_scalar())
+            .prop_map(|array| Vector::<N>::new(array))
+            .boxed()
+    }
+
+    proptest! {
+        #[test]
+        fn vector_addition_is_commutative(
+            vector0 in arbitrary_vector::<3>(),
+            vector1 in arbitrary_vector::<3>(),
+        ) {
+            // Macdonald Definition 2.1 V1
+            prop_assert_eq!(
+                vector0.clone() + vector1.clone(),
+                vector1 + vector0
+            );
+        }
+
+      #[test]
+        fn vector_addition_is_associative(
+            vector0 in arbitrary_vector::<3>(),
+            vector1 in arbitrary_vector::<3>(),
+            vector2 in arbitrary_vector::<3>()
+        ) {
+            // Macdonald Definition 2.1 V2
+            prop_assert_eq!(
+                (vector0.clone() + vector1.clone()) + vector2.clone(),
+                vector0 + (vector1 + vector2)
+            );
+        }
+
+        #[test]
+        fn zero_vector_is_the_additive_identity(vector in arbitrary_vector::<3>()) {
+            // Macdonald Definition 2.1 V3
+            prop_assert_eq!(
+                vector.clone() + Vector::<3>::zero(),
+                vector
+            );
+        }
+
+        #[test]
+        fn scalar_multiplication_by_0_yields_the_zero_vector(
+            vector in arbitrary_vector::<3>()
+        ) {
+            // Macdonald Definition 2.1 V4
+            prop_assert_eq!(0.0 * vector, Vector::<3>::zero());
+        }
+
+        #[test]
+        fn scalar_1_is_the_multiplicative_identity(vector in arbitrary_vector::<3>()) {
+            // Macdonald Definition 2.1 V5
+            prop_assert_eq!(
+                1.0 * vector.clone(),
+                vector
+            );
+        }
+
+        #[test]
+        fn scalar_multiplication_is_associative(
+            a in arbitrary_scalar(),
+            b in arbitrary_scalar(),
+            vector in arbitrary_vector::<3>()
+        ) {
+            // Macdonald Definition 2.1 V6
+            prop_assert_eq!(
+                a * (b * vector.clone()),
+                (a * b) * vector
+            );
+        }
+
+        #[test]
+        fn scalar_multiplication_distributes_over_vector_addition(
+            vector0 in arbitrary_vector::<3>(),
+            vector1 in arbitrary_vector::<3>(),
+            a in arbitrary_scalar()
+        ) {
+            // Macdonald Definition 2.1 V7
+            prop_assert_eq!(
+                a * (vector0.clone() + vector1.clone()),
+                a * vector0 + a * vector1
+            );
+        }
+
+        #[test]
+        fn scalar_multiplication_distributes_over_scalar_addition(
+            a in arbitrary_scalar(),
+            b in arbitrary_scalar(),
+            vector in arbitrary_vector::<3>()
+        ) {
+            // Macdonald Definition 2.1 V8
+            prop_assert_eq!(
+                (a + b) * vector.clone(),
+                a * vector.clone() + b * vector
+            );
+        }
+
+        #[test]
+        fn vector_subtraction_is_like_vector_addition(
+            vector0 in arbitrary_vector::<3>(),
+            vector1 in arbitrary_vector::<3>()
+        ) {
+            prop_assert_eq!(
+                vector0.clone() - vector1.clone(),
+                vector0 + (-1.0) * vector1
+            )
+        }
+
+        #[test]
+        fn a_vector_plus_its_additive_inverse_is_zero(vector in arbitrary_vector::<3>()) {
+            prop_assert_eq!(
+                vector.clone() + (-1.0) * vector,
+                Vector::<3>::zero()
+            );
+        }
     }
 }
